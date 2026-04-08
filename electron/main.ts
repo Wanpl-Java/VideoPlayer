@@ -2,9 +2,9 @@ import { join, dirname } from 'path';
 import { Readable } from 'stream';
 import { createGunzip } from 'zlib';
 import { fileURLToPath } from 'node:url';
-import { createReadStream, createWriteStream, unlink } from 'fs';
+import { createReadStream, createWriteStream, existsSync, unlink } from 'fs';
 
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, nativeImage } from 'electron';
 import { BrowserWindow } from 'electron';
 
 export const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,7 +14,44 @@ let window: any;
 
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 
+const resolveAppIconPath = () => {
+  const devIconPath = join(process.cwd(), 'public', 'icon.png');
+  const bundledIconPath = join(app.getAppPath(), 'dist', 'icon.png');
+
+  if (existsSync(devIconPath)) {
+    return devIconPath;
+  }
+
+  if (existsSync(bundledIconPath)) {
+    return bundledIconPath;
+  }
+
+  return undefined;
+};
+
+const applyAppIcon = () => {
+  const iconPath = resolveAppIconPath();
+
+  if (!iconPath) {
+    return undefined;
+  }
+
+  const icon = nativeImage.createFromPath(iconPath);
+
+  if (icon.isEmpty()) {
+    return undefined;
+  }
+
+  if (process.platform === 'darwin') {
+    app.dock.setIcon(icon);
+  }
+
+  return icon;
+};
+
 const createWindow = () => {
+  const appIcon = applyAppIcon();
+
   window = new BrowserWindow({
     width: 1300,
     height: 800,
@@ -32,7 +69,8 @@ const createWindow = () => {
       // 网页的 JavaScript 代码与 Electron 提供的 API（如 require）共享同一个上下文
       contextIsolation: true
     },
-    title: 'JumpServer Video Player'
+    title: 'Video Player',
+    icon: appIcon
   });
 
   const serveUrl = process.env.VITE_DEV_SERVER_URL;
@@ -124,7 +162,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('set-title', _event => {
-    window.setTitle('JumpServer Video Player');
+    window.setTitle('Video Player');
   });
 });
 

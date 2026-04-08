@@ -1,0 +1,6 @@
+allowBuilds:
+  '@parcel/watcher': false
+  core-js: false
+  electron: true
+  esbuild: false
+  vue-demi: false

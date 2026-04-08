@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import Logo from '@/assets/Logo.svg';
+import Logo from '@/assets/Logo.png';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useSettingStore } from '@/store/modules/settingStroe.ts';
