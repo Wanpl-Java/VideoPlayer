@@ -32,6 +32,14 @@
       </div>
 
       <div class="controls-right">
+        <n-select
+          v-model:value="playbackSpeed"
+          :options="speedOptions"
+          size="small"
+          class="speed-select"
+          :disabled="isProcessing"
+          @update:value="handleSpeedChange"
+        />
         <n-tag round size="small" :bordered="false" type="success">
           {{ t('scalingRatio') }}: {{ Math.round(scale * 100) }}%
         </n-tag>
@@ -73,6 +81,16 @@ const isPlaying = ref(false);
 const isProcessing = ref(false);
 const loadingBuffer = ref(false);
 const fileDataEndCalled = ref(false);
+/** 当前播放倍速，默认 1x */
+const playbackSpeed = ref(1);
+
+/** 倍速选项，与 MP4 播放器保持一致 */
+const speedOptions = [
+  { label: '0.75x', value: 0.75 },
+  { label: '1x', value: 1 },
+  { label: '1.5x', value: 1.5 },
+  { label: '2x', value: 2 }
+];
 
 /**
  * @description 计算缩放比
@@ -208,6 +226,15 @@ const initRecordingEvent = (record: any) => {
   setTimeout(fastRecompute, 100);
   setTimeout(debouncedRecompute, 300);
   setTimeout(slowRecompute, 600);
+};
+
+/**
+ * @description 切换播放倍速
+ * @param speed 倍速值
+ */
+const handleSpeedChange = (speed: number) => {
+  if (!recording?.setSpeed) return;
+  recording.setSpeed(speed);
 };
 
 /**
@@ -473,6 +500,7 @@ onUnmounted(() => {
   chunksArr.length = 0;
   currentPercent.value = 0;
   currentPosition.value = '00:00';
+  playbackSpeed.value = 1;
   isPlaying.value = false;
 });
 </script>
@@ -544,7 +572,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  width: 200px;
+  gap: 8px;
+  width: 280px;
+}
+
+.speed-select {
+  width: 88px;
 }
 
 .scale-text {
