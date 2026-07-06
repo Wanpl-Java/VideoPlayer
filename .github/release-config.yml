@@ -1,0 +1,9 @@
+name-template: '$RESOLVED_VERSION'
+tag-template: '$TAG_NAME'
+template: |
+  ## 更新内容
+
+  $CHANGES
+
+change-template: '- $TITLE (@$AUTHOR)'
+change-title-escapes: '\<*_&'

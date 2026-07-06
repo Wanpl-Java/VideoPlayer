@@ -1,50 +1,60 @@
 on:
   push:
-    # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - 'v*'
+  # 支持在 Actions 页面手动触发，无需打 tag
+  workflow_dispatch:
 
 name: Create Release And Upload assets
 
 jobs:
-  create-realese:
+  create-release:
     name: Create Release
     runs-on: macos-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Get version
         id: get_version
         run: |
-          TAG=$(basename ${GITHUB_REF})
-          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        id: create_release
-        uses: release-drafter/release-drafter@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          config-name: release-config.yml
-          version: ${{ steps.get_version.outputs.TAG }}
-          tag: ${{ steps.get_version.outputs.TAG }}
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG=$(basename "${GITHUB_REF}")
+          else
+            TAG="v$(node -p "require('./package.json').version")"
+          fi
+          echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'yarn'
 
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Build Binary
-        run: |
-          yarn install
-          yarn build
-          ls -al release/
+        run: yarn build
+        env:
+          # Fork 无 Apple / Windows 签名证书时跳过自动签名
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List release artifacts
+        run: ls -al release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.TAG }}
+          name: ${{ steps.get_version.outputs.TAG }}
+          generate_release_notes: true
+          files: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.blockmap
+            release/latest*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
-          XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
-          XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
